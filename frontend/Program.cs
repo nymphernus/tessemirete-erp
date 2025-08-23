@@ -21,5 +21,6 @@ builder.Services.AddMudServices();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 await builder.Build().RunAsync();

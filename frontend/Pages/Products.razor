@@ -1,5 +1,10 @@
 @page "/products"
 @using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@using frontend.Pages.ProductsPages
+@inject IProductService ProductService
+@inject IDialogService DialogService
 
 <MudPaper Elevation="2" Class="pa-6" Style="width:100%; max-width:1600px; margin:auto;">
     <!-- Заголовок и кнопка -->
@@ -8,6 +13,7 @@
         <MudButton Variant="Variant.Filled"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDialog"
                    Size="Size.Large"
                    Class="btn-large">
             Новый товар
@@ -16,71 +22,200 @@
 
     <!-- Поиск -->
     <MudTextField T="string"
+                  @bind-Value="searchString"
                   Label="Поиск"
                   Margin="Margin.Dense"
                   Adornment="Adornment.End"
                   Immediate="true"
+                  OnKeyUp="@(e => FilterProducts())"
                   Class="mb-4 full-width" />
 
     <!-- Контент -->
-    <MudTable Items="@products"
-        Hover="true"
-        Dense="true"
-        Striped="true"
-        Class="elevation-1 rounded-lg full-width customers-table">
+    @if (!isLoaded)
+    {
+        <div class="d-flex justify-content-center my-6">
+            <MudProgressCircular Indeterminate="true" Size="Size.Medium" Color="Color.Primary" />
+        </div>
+    }
+    else if (filteredProducts.Count == 0)
+    {
+        <MudPaper Elevation="1" Class="pa-6 text-center">
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Товары не найдены
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@filteredProducts"
+            Hover="true"
+            Dense="true"
+            Striped="true"
+            Class="elevation-1 rounded-lg full-width customers-table">
 
-        <HeaderContent>
-            <MudTh>Название</MudTh>
-            <MudTh>Категория</MudTh>
-            <MudTh>Цена</MudTh>
-            <MudTh>Остаток</MudTh>
-            <MudTh Class="text-center">Действия</MudTh>
-        </HeaderContent>
+            <HeaderContent>
+                <MudTh>Название</MudTh>
+                <MudTh>Категория</MudTh>
+                <MudTh>Цена</MudTh>
+                <MudTh>Остаток</MudTh>
+                <MudTh>Артикул</MudTh>
+                <MudTh Class="text-center">Действия</MudTh>
+            </HeaderContent>
 
-        <RowTemplate>
-            <MudTd>@context.Name</MudTd>
-            <MudTd>@context.Category</MudTd>
-            <MudTd>@context.Price.ToString("C")</MudTd>
-            <MudTd>@context.Stock</MudTd>
-            <MudTd Class="text-center">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                               Color="Color.Info"
-                               Size="Size.Small"
-                               Title="Редактировать" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                               Color="Color.Error"
-                               Size="Size.Small"
-                               Title="Удалить" />
-            </MudTd>
-        </RowTemplate>
+            <RowTemplate>
+                <MudTd>@context.Name</MudTd>
+                <MudTd>@context.Category</MudTd>
+                <MudTd>@context.Price.ToString("C")</MudTd>
+                <MudTd>
+                    <MudChip T="int" Color="@(context.Stock > 10 ? Color.Success : Color.Warning)" 
+                             Variant="Variant.Filled" Size="Size.Small">
+                        @context.Stock
+                    </MudChip>
+                </MudTd>
+                <MudTd>@context.Sku</MudTd>
+                <MudTd Class="text-center">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Info"
+                                   Size="Size.Small"
+                                   OnClick="@(e => OpenEditDialog(context))"
+                                   Title="Редактировать" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(e => OpenDeleteDialog(context))"
+                                   Title="Удалить" />
+                </MudTd>
+            </RowTemplate>
 
-        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" 
-                           RowsPerPageString="Записей на странице:"
-                           OfText="из"
-                           AllItemsText="Все" />
-        </PagerContent>
-    </MudTable>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" 
+                               RowsPerPageString="Записей на странице:"
+                               OfText="из"
+                               AllItemsText="Все" />
+            </PagerContent>
+        </MudTable>
+    }
 </MudPaper>
 
 @code {
     private List<Product> products = new();
+    private List<Product> filteredProducts = new();
+    private string searchString = "";
+    private bool isLoaded = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        products = new List<Product>
-        {
-            new Product { Name = "Ноутбук", Category = "Электроника", Price = 1200, Stock = 15 },
-            new Product { Name = "Мышь", Category = "Аксессуары", Price = 25, Stock = 100 },
-            new Product { Name = "Клавиатура", Category = "Аксессуары", Price = 75, Stock = 50 }
-        };
+        await LoadProductsAsync();
     }
 
-    public class Product
+    private async Task LoadProductsAsync()
     {
-        public string Name { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-        public int Stock { get; set; }
+        isLoaded = false;
+        StateHasChanged();
+
+        try
+        {
+            var productList = await ProductService.GetProductsAsync();
+            if (productList is not null)
+            {
+                products = productList.ToList();
+                FilterProducts();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки товаров: {ex.Message}");
+        }
+        finally
+        {
+            isLoaded = true;
+            StateHasChanged();
+        }
+    }
+
+    private void FilterProducts()
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+        {
+            filteredProducts = products;
+            return;
+        }
+
+        filteredProducts = products.Where(p =>
+                (p.Name?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (p.Category?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (p.Sku?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
+            .ToList();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<CreateProductDialog>
+        {
+            { x => x.Product, new Product() }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        var dialog = DialogService.Show<CreateProductDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadProductsAsync();
+    }
+
+    private async Task OpenEditDialog(Product product)
+    {
+        var parameters = new DialogParameters<EditProductDialog>
+        {
+            { x => x.Product, product }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        var dialog = DialogService.Show<EditProductDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadProductsAsync();
+    }
+
+    private async Task OpenDeleteDialog(Product product)
+    {
+        var parameters = new DialogParameters<DeleteConfirmationDialog>
+        {
+            { x => x.ContentText, $"Вы уверены, что хотите удалить '{product.Name}'?" },
+            { x => x.ButtonText, "Удалить" },
+            { x => x.Color, Color.Error }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        var dialog = DialogService.Show<DeleteConfirmationDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var success = await ProductService.DeleteProductAsync(product.Id);
+            if (success)
+            {
+                products.Remove(product);
+                FilterProducts();
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine("Не удалось удалить товар");
+            }
+        }
     }
 }

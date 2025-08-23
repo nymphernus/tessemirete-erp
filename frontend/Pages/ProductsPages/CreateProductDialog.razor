@@ -1,0 +1,79 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IProductService ProductService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Добавить товар</MudText>
+
+    <MudForm @ref="form" Model="@product">
+        <MudTextField T="string" Label="Название" @bind-Value="product.Name"
+                      For="@(() => product.Name)" Required="true"
+                      FullWidth="true" Margin="Margin.Normal" />
+
+        <MudTextField T="string" Label="Категория" @bind-Value="product.Category"
+                      For="@(() => product.Category)" Required="true"
+                      FullWidth="true" Margin="Margin.Normal" />
+
+        <MudTextField T="string" Label="SKU" @bind-Value="product.Sku"
+                      For="@(() => product.Sku)"
+                      FullWidth="true" Margin="Margin.Normal" />
+
+        <MudNumericField T="decimal" Label="Цена" @bind-Value="product.Price"
+                                For="@(() => product.Price)" Required="true"
+                                Variant="Variant.Outlined" Margin="Margin.Normal"
+                                Format="C" Culture="@System.Globalization.CultureInfo.CurrentCulture"
+                                FullWidth="true" />
+
+        <MudNumericField T="int" Label="Остаток" @bind-Value="product.Stock"
+                             For="@(() => product.Stock)" Required="true"
+                             Variant="Variant.Outlined" Margin="Margin.Normal"
+                             FullWidth="true" />
+    </MudForm>
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudSpacer />
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Добавить</MudButton>
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Product? Product { get; set; }
+
+    private MudForm? form;
+    private Product product = new();
+
+    protected override void OnInitialized()
+    {
+        product = Product ?? new Product();
+    }
+
+    private async Task Submit()
+    {
+        await form!.Validate();
+        if (!form.IsValid) return;
+
+        try
+        {
+            var result = await ProductService.CreateProductAsync(product);
+            if (result is not null)
+            {
+                Snackbar.Add("Товар успешно добавлен!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                Snackbar.Add("Не удалось добавить товар", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

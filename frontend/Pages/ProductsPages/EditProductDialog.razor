@@ -1,0 +1,82 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IProductService ProductService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Редактировать товар</MudText>
+
+    <MudForm @ref="form" Model="@product">
+        <MudTextField T="string" Label="Название" @bind-Value="product.Name"
+                      For="@(() => product.Name)" Required="true" Margin="Margin.Normal" FullWidth="true" />
+
+        <MudTextField T="string" Label="Категория" @bind-Value="product.Category"
+                      For="@(() => product.Category)" Required="true" Margin="Margin.Normal" FullWidth="true" />
+
+        <MudTextField T="string" Label="SKU" @bind-Value="product.Sku"
+                      For="@(() => product.Sku)" Margin="Margin.Normal" FullWidth="true" />
+
+        <MudNumericField T="decimal" Label="Цена" @bind-Value="product.Price"
+                                 For="@(() => product.Price)" Required="true" 
+                                 Margin="Margin.Normal" FullWidth="true" Format="C" />
+
+        <MudNumericField T="int" Label="Остаток" @bind-Value="product.Stock"
+                             For="@(() => product.Stock)" Required="true" 
+                             Margin="Margin.Normal" FullWidth="true" />
+    </MudForm>
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudSpacer />
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Сохранить</MudButton>
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Product Product { get; set; } = default!;
+
+    private MudForm? form;
+    private Product product = new();
+
+    protected override void OnInitialized()
+    {
+        product = new Product
+        {
+            Id = Product.Id,
+            Name = Product.Name,
+            Category = Product.Category,
+            Price = Product.Price,
+            Stock = Product.Stock,
+            Sku = Product.Sku
+        };
+    }
+
+    private async Task Submit()
+    {
+        await form!.Validate();
+        if (!form.IsValid) return;
+
+        try
+        {
+            var result = await ProductService.UpdateProductAsync(product.Id, product);
+            if (result is not null)
+            {
+                Snackbar.Add("Товар успешно обновлён!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                Snackbar.Add("Не удалось обновить товар", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
