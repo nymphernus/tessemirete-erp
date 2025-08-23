@@ -1,7 +1,11 @@
-* {
+*, *::before, *::after {
     box-sizing: border-box;
-    overflow: hidden;
 }
+
+html, body {
+    height: 100%;
+}
+
 .page {
     display: flex;
     height: 100vh;
@@ -39,6 +43,9 @@
     background-color: rgba(225, 226, 223, 0.8);
 }
 
+.customers-table .mud-table-row{
+    height: 46px;
+}
 
 /* Навигационная панель */
 .sidebar {
@@ -47,6 +54,7 @@
     position: fixed;
     border-right: 1px solid #e0e0e0;
     overflow-y: auto;
+    overflow-x: hidden;
     z-index: 90;
     margin-top: 64px;
     height: calc(100vh - 64px);
@@ -76,4 +84,25 @@
 
 .refresh-btn:hover {
     background-color: rgb(153, 241, 244);
+}
+
+/* Заголовок и кнопка действий */
+.customers-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.customers-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.btn-large {
+    font-weight: bold;
+    font-size: larger !important;
+    min-width: 300px !important;
 }

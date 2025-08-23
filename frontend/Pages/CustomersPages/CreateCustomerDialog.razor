@@ -1,0 +1,67 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject ICustomerService CustomerService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Добавить клиента</MudText>
+
+    <MudForm @ref="form" Model="@customer">
+        <MudTextField T="string" Label="Имя" @bind-Value="customer.Name"
+                      For="@(() => customer.Name)" Required="true"
+                      FullWidth="true" Margin="Margin.Normal" />
+
+        <MudTextField T="string" Label="Организация" @bind-Value="customer.Organization"
+                      For="@(() => customer.Organization)" Required="true"
+                      FullWidth="true" Margin="Margin.Normal" />
+
+        <MudTextField T="string" Label="Электронная почта" @bind-Value="customer.Email"
+                      For="@(() => customer.Email)" Required="true"
+                      FullWidth="true" Margin="Margin.Normal" />
+
+        <MudTextField T="string" Label="Телефон" @bind-Value="customer.Phone"
+                      FullWidth="true" Margin="Margin.Normal" />
+
+        <MudTextField T="string" Label="Адрес" @bind-Value="customer.Address"
+                      FullWidth="true" Margin="Margin.Normal" Lines="3" />
+    </MudForm>
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudSpacer />
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Добавить</MudButton>
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Customer? Customer { get; set; }
+
+    private MudForm? form;
+    private Customer customer = new();
+
+    protected override void OnInitialized()
+    {
+        customer = Customer ?? new Customer();
+    }
+
+    private async Task Submit()
+    {
+        await form!.Validate();
+        if (!form.IsValid) return;
+
+        var result = await CustomerService.CreateCustomerAsync(customer);
+        if (result is not null)
+        {
+            Snackbar.Add("Клиент успешно добавлен!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(result));
+        }
+        else
+        {
+            Snackbar.Add("Не удалось создать клиента", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

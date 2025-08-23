@@ -1,0 +1,80 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject ICustomerService CustomerService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Редактировать клиента</MudText>
+
+    <MudForm @ref="form" Model="@customer">
+        <MudTextField T="string" Label="Имя" @bind-Value="customer.Name"
+                      For="@(() => customer.Name)" Required="true" Margin="Margin.Normal" FullWidth="true" />
+
+        <MudTextField T="string" Label="Организация" @bind-Value="customer.Organization"
+                      For="@(() => customer.Organization)" Required="true" Margin="Margin.Normal" FullWidth="true" />
+
+        <MudTextField T="string" Label="Электронная почта" @bind-Value="customer.Email"
+                      For="@(() => customer.Email)" Required="true" Margin="Margin.Normal" FullWidth="true" />
+
+        <MudTextField T="string" Label="Телефон" @bind-Value="customer.Phone"
+                      For="@(() => customer.Phone)" Margin="Margin.Normal" FullWidth="true" />
+
+        <MudTextField T="string" Label="Адрес" @bind-Value="customer.Address"
+                      For="@(() => customer.Address)" Lines="3" Margin="Margin.Normal" FullWidth="true" />
+    </MudForm>
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudSpacer />
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Сохранить</MudButton>
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Customer Customer { get; set; } = default!;
+
+    private MudForm? form;
+    private Customer customer = new();
+
+    protected override void OnInitialized()
+    {
+        customer = new Customer
+        {
+            Id = Customer.Id,
+            Name = Customer.Name,
+            Organization = Customer.Organization,
+            Email = Customer.Email,
+            Phone = Customer.Phone,
+            Address = Customer.Address
+        };
+    }
+
+    private async Task Submit()
+    {
+        await form!.Validate();
+        if (!form.IsValid) return;
+
+        try
+        {
+            var result = await CustomerService.UpdateCustomerAsync(customer.Id, customer);
+            if (result is not null)
+            {
+                Snackbar.Add("Клиент успешно обновлён!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                Snackbar.Add("Не удалось обновить клиента", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

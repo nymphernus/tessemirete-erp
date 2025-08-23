@@ -2,55 +2,93 @@
 @using MudBlazor
 @using frontend.Services
 @using frontend.Models
+@using frontend.Pages.CustomersPages
 @inject ICustomerService CustomerService
-@inject NavigationManager Navigation
+@inject IDialogService DialogService
 
-<MudGrid>
-    <MudItem xs="12" md="6">
-        <MudTextField T="string" @bind-Value="searchString" Label="Поиск" 
-                      Variant="Variant.Outlined" Adornment="Adornment.End" 
-                      AdornmentIcon="@Icons.Material.Filled.Search"
-                      AdornmentIconClicked="FilterCustomers" />
-    </MudItem>
-    <MudItem xs="12" md="6" Class="text-end">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="OpenCreateDialog">
-            New Customer
+<MudPaper Elevation="2" Class="pa-6" Style="width:100%; max-width:1600px; margin:auto;">
+    <!-- Заголовок и кнопка -->
+    <div class="customers-header">
+        <MudText Typo="Typo.h4" Class="font-weight-bold">Клиенты</MudText>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDialog"
+                   Size="Size.Large"
+                   Class="btn-large">
+            Новая запись
         </MudButton>
-    </MudItem>
-</MudGrid>
+    </div>
 
-@if (!isLoaded)
-{
-    <MudProgressCircular Indeterminate="true" />
-}
-else
-{
-    <MudTable Items="@filteredCustomers" Hover="true" Dense="true" Striped="true">
-        <HeaderContent>
-            <MudTh>Name</MudTh>
-            <MudTh>Organization</MudTh>
-            <MudTh>Email</MudTh>
-            <MudTh>Phone</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.Name</MudTd>
-            <MudTd>@context.Organization</MudTd>
-            <MudTd>@context.Email</MudTd>
-            <MudTd>@context.Phone</MudTd>
-            <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" 
-                               OnClick="@(e => OpenEditDialog(context))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
-                               OnClick="@(e => OpenDeleteDialog(context))" />
-            </MudTd>
-        </RowTemplate>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" />
-        </PagerContent>
-    </MudTable>
-}
+    <!-- Поиск -->
+    <MudTextField T="string"
+                  @bind-Value="searchString"
+                  Label="Поиск"
+                  Margin="Margin.Dense"
+                  Adornment="Adornment.End"
+                  Immediate="true"
+                  OnKeyUp="@(e => FilterCustomers())"
+                  Class="mb-4 full-width" />
+
+    <!-- Контент -->
+    @if (!isLoaded)
+    {
+        <div class="d-flex justify-content-center my-6">
+            <MudProgressCircular Indeterminate="true" Size="Size.Medium" Color="Color.Primary" />
+        </div>
+    }
+    else if (filteredCustomers.Count == 0)
+    {
+        <MudPaper Elevation="1" Class="pa-6 text-center">
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Клиенты не найдены
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@filteredCustomers"
+            Hover="true"
+            Dense="true"
+            Striped="true"
+            Class="elevation-1 rounded-lg full-width customers-table">
+
+            <HeaderContent>
+                <MudTh>Имя</MudTh>
+                <MudTh>Организация</MudTh>
+                <MudTh>Электронная почта</MudTh>
+                <MudTh>Телефон</MudTh>
+                <MudTh Class="text-center">Действия</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd>@context.Name</MudTd>
+                <MudTd>@context.Organization</MudTd>
+                <MudTd>@context.Email</MudTd>
+                <MudTd>@context.Phone</MudTd>
+                <MudTd Class="text-center">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Info"
+                                   Size="Size.Small"
+                                   OnClick="@(e => OpenEditDialog(context))"
+                                   Title="Редактировать" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(e => OpenDeleteDialog(context))"
+                                   Title="Удалить" />
+                </MudTd>
+            </RowTemplate>
+
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" 
+                               RowsPerPageString="Записей на странице:"
+                               OfText="из"
+                               AllItemsText="Все" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudPaper>
 
 @code {
     private List<Customer> customers = new();
@@ -63,16 +101,14 @@ else
         await LoadCustomersAsync();
     }
 
-
     private async Task LoadCustomersAsync()
     {
         isLoaded = false;
-        StateHasChanged();
-        
+
         try
         {
             var customerList = await CustomerService.GetCustomersAsync();
-            if (customerList != null)
+            if (customerList is not null)
             {
                 customers = customerList.ToList();
                 FilterCustomers();
@@ -85,40 +121,91 @@ else
         finally
         {
             isLoaded = true;
-            StateHasChanged();
         }
     }
 
     private void FilterCustomers()
     {
-        if (string.IsNullOrEmpty(searchString))
+        if (string.IsNullOrWhiteSpace(searchString))
         {
             filteredCustomers = customers;
+            return;
         }
-        else
+
+        filteredCustomers = customers.Where(c =>
+                (c.Name?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (c.Organization?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (c.Email?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
+            .ToList();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<CreateCustomerDialog>
         {
-            filteredCustomers = customers.Where(c => 
-                c.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-                c.Organization.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-                c.Email.Contains(searchString, StringComparison.OrdinalIgnoreCase)
-            ).ToList();
+            { x => x.Customer, new Customer() }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+            };
+        var dialog = DialogService.Show<CreateCustomerDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadCustomersAsync();
+    }
+
+    private async Task OpenEditDialog(Customer customer)
+    {
+        var parameters = new DialogParameters<EditCustomerDialog>
+        {
+            { x => x.Customer, customer }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+            };
+        var dialog = DialogService.Show<EditCustomerDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadCustomersAsync();
+    }
+
+    private async Task OpenDeleteDialog(Customer customer)
+    {
+        var parameters = new DialogParameters<DeleteConfirmationDialog>
+        {
+            { x => x.ContentText, $"Вы уверены, что хотите удалить клиента '{customer.Name}'?" },
+            { x => x.ButtonText, "Удалить" },
+            { x => x.Color, Color.Error }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+            };
+        var dialog = DialogService.Show<DeleteConfirmationDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var success = await CustomerService.DeleteCustomerAsync(customer.Id);
+            if (success)
+            {
+                customers.Remove(customer);
+                FilterCustomers();
+            }
+            else
+            {
+                Console.WriteLine("Не удалось удалить клиента");
+            }
         }
-        StateHasChanged();
     }
-
-    private void OpenCreateDialog()
-    {
-        // Логика открытия диалога создания клиента
-    }
-
-    private void OpenEditDialog(Customer customer)
-    {
-        // Логика открытия диалога редактирования клиента
-    }
-
-    private void OpenDeleteDialog(Customer customer)
-    {
-        // Логика открытия диалога удаления клиента
-    }
-
 }

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.Http;
 using frontend;
 using MudBlazor.Services;
 using frontend.Services;
@@ -15,6 +14,7 @@ builder.Services.AddHttpClient("API", client =>
 {
     client.BaseAddress = new Uri(baseUrl);
 });
+
 
 builder.Services.AddMudServices();
 

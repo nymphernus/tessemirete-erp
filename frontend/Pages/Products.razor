@@ -1,36 +1,67 @@
 @page "/products"
 @using MudBlazor
 
-<MudGrid>
-        <MudItem xs="12" md="6">
-            <MudTextField T="string" Label="Search products..." Variant="Variant.Outlined" />
-        </MudItem>
-        <MudItem xs="12" md="6" Class="text-end">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
-                New Product
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    
-    <MudTable Items="@products" Hover="true" Dense="true">
+<MudPaper Elevation="2" Class="pa-6" Style="width:100%; max-width:1600px; margin:auto;">
+    <!-- Заголовок и кнопка -->
+    <div class="customers-header">
+        <MudText Typo="Typo.h4" Class="font-weight-bold">Товары</MudText>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Size="Size.Large"
+                   Class="btn-large">
+            Новый товар
+        </MudButton>
+    </div>
+
+    <!-- Поиск -->
+    <MudTextField T="string"
+                  Label="Поиск"
+                  Margin="Margin.Dense"
+                  Adornment="Adornment.End"
+                  Immediate="true"
+                  Class="mb-4 full-width" />
+
+    <!-- Контент -->
+    <MudTable Items="@products"
+        Hover="true"
+        Dense="true"
+        Striped="true"
+        Class="elevation-1 rounded-lg full-width customers-table">
+
         <HeaderContent>
-            <MudTh>Name</MudTh>
-            <MudTh>Category</MudTh>
-            <MudTh>Price</MudTh>
-            <MudTh>Stock</MudTh>
-            <MudTh>Actions</MudTh>
+            <MudTh>Название</MudTh>
+            <MudTh>Категория</MudTh>
+            <MudTh>Цена</MudTh>
+            <MudTh>Остаток</MudTh>
+            <MudTh Class="text-center">Действия</MudTh>
         </HeaderContent>
+
         <RowTemplate>
             <MudTd>@context.Name</MudTd>
             <MudTd>@context.Category</MudTd>
             <MudTd>@context.Price.ToString("C")</MudTd>
             <MudTd>@context.Stock</MudTd>
-            <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+            <MudTd Class="text-center">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                               Color="Color.Info"
+                               Size="Size.Small"
+                               Title="Редактировать" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Color="Color.Error"
+                               Size="Size.Small"
+                               Title="Удалить" />
             </MudTd>
         </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" 
+                           RowsPerPageString="Записей на странице:"
+                           OfText="из"
+                           AllItemsText="Все" />
+        </PagerContent>
     </MudTable>
+</MudPaper>
 
 @code {
     private List<Product> products = new();
@@ -39,9 +70,9 @@
     {
         products = new List<Product>
         {
-            new Product { Name = "Laptop", Category = "Electronics", Price = 1200, Stock = 15 },
-            new Product { Name = "Mouse", Category = "Accessories", Price = 25, Stock = 100 },
-            new Product { Name = "Keyboard", Category = "Accessories", Price = 75, Stock = 50 }
+            new Product { Name = "Ноутбук", Category = "Электроника", Price = 1200, Stock = 15 },
+            new Product { Name = "Мышь", Category = "Аксессуары", Price = 25, Stock = 100 },
+            new Product { Name = "Клавиатура", Category = "Аксессуары", Price = 75, Stock = 50 }
         };
     }
 

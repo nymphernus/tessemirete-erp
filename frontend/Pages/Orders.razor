@@ -1,70 +1,209 @@
 @page "/orders"
 @using MudBlazor
 
-<MudGrid>
-        <MudItem xs="12" md="6">
-            <MudTextField T="string" Label="Search orders..." Variant="Variant.Outlined" />
-        </MudItem>
-        <MudItem xs="12" md="6" Class="text-end">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
-                New Order
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    
-    <MudTable Items="@orders" Hover="true" Dense="true">
-        <HeaderContent>
-            <MudTh>Date</MudTh>
-            <MudTh>Customer</MudTh>
-            <MudTh>Amount</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>@context.Date.ToString("dd/MM/yyyy")</MudTd>
-            <MudTd>@context.Customer</MudTd>
-            <MudTd>@context.Amount.ToString("C")</MudTd>
-            <MudTd>
-                <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
-                    @context.Status
-                </MudChip>
-            </MudTd>
-            <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
+<MudPaper Elevation="2" Class="pa-6" Style="width:100%; max-width:1600px; margin:auto;">
+    <!-- Заголовок и кнопка -->
+    <div class="customers-header">
+        <MudText Typo="Typo.h4" Class="font-weight-bold">Заказы</MudText>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDialog"
+                   Size="Size.Large"
+                   Class="btn-large">
+            Новый заказ
+        </MudButton>
+    </div>
+
+    <!-- Поиск -->
+    <MudTextField T="string"
+                  @bind-Value="searchString"
+                  Label="Поиск"
+                  Margin="Margin.Dense"
+                  Adornment="Adornment.End"
+                  Immediate="true"
+                  OnKeyUp="@(e => FilterOrders())"
+                  Class="mb-4 full-width" />
+
+    <!-- Контент -->
+    @if (!isLoaded)
+    {
+        <div class="d-flex justify-content-center my-6">
+            <MudProgressCircular Indeterminate="true" Size="Size.Medium" Color="Color.Primary" />
+        </div>
+    }
+    else if (filteredOrders.Count == 0)
+    {
+        <MudPaper Elevation="1" Class="pa-6 text-center">
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
+                Заказы не найдены
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@filteredOrders"
+            Hover="true"
+            Dense="true"
+            Striped="true"
+            Class="elevation-1 rounded-lg full-width customers-table">
+
+            <HeaderContent>
+                <MudTh>Дата</MudTh>
+                <MudTh>Клиент</MudTh>
+                <MudTh>Сумма</MudTh>
+                <MudTh>Статус</MudTh>
+                <MudTh Class="text-center">Действия</MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd>@context.CreatedAt.ToString("dd/MM/yyyy")</MudTd>
+                <MudTd>@context.CustomerName</MudTd>
+                <MudTd>@context.TotalAmount.ToString("C")</MudTd>
+                <MudTd Class="text-center">
+                    <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled" Size="Size.Small">
+                        @GetStatusText(context.Status)
+                    </MudChip>
+                </MudTd>
+                <MudTd Class="text-center">
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="@(e => ViewOrderDetails(context))"
+                                   Title="Просмотр" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Info"
+                                   Size="Size.Small"
+                                   OnClick="@(e => OpenEditDialog(context))"
+                                   Title="Редактировать" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(e => OpenDeleteDialog(context))"
+                                   Title="Удалить" />
+                </MudTd>
+            </RowTemplate>
+
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" 
+                               RowsPerPageString="Записей на странице:"
+                               OfText="из"
+                               AllItemsText="Все" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudPaper>
 
 @code {
     private List<Order> orders = new();
+    private List<Order> filteredOrders = new();
+    private string searchString = "";
+    private bool isLoaded = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        orders = new List<Order>
+        await LoadOrdersAsync();
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        isLoaded = false;
+        StateHasChanged();
+        
+        try
         {
-            new Order { Date = DateTime.Now.AddDays(-1), Customer = "John Doe", Amount = 1250, Status = "Completed" },
-            new Order { Date = DateTime.Now.AddDays(-2), Customer = "Jane Smith", Amount = 890, Status = "Pending" },
-            new Order { Date = DateTime.Now.AddDays(-3), Customer = "Bob Johnson", Amount = 2100, Status = "Shipped" }
-        };
+            // Здесь будет вызов сервиса для получения заказов
+            // var orderList = await OrderService.GetOrdersAsync();
+            // Пока тестовые данные:
+            orders = new List<Order>
+            {
+                new Order { Id = 1, CustomerName = "John Doe", TotalAmount = 1250.50m, Status = "ожидание", CreatedAt = DateTime.Now.AddDays(-2) },
+                new Order { Id = 2, CustomerName = "Jane Smith", TotalAmount = 890.75m, Status = "подтверждено", CreatedAt = DateTime.Now.AddDays(-1) },
+                new Order { Id = 3, CustomerName = "Bob Johnson", TotalAmount = 2100.00m, Status = "доставлено", CreatedAt = DateTime.Now }
+            };
+            FilterOrders();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки заказов: {ex.Message}");
+        }
+        finally
+        {
+            isLoaded = true;
+            StateHasChanged();
+        }
+    }
+
+    private void FilterOrders()
+    {
+        if (string.IsNullOrEmpty(searchString))
+        {
+            filteredOrders = orders;
+        }
+        else
+        {
+            filteredOrders = orders.Where(o => 
+                o.Id.ToString().Contains(searchString) ||
+                o.CustomerName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                o.Status.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
     }
 
     private Color GetStatusColor(string status)
     {
         return status switch
         {
-            "Completed" => Color.Success,
-            "Pending" => Color.Warning,
-            "Shipped" => Color.Info,
+            "ожидание" => Color.Warning,
+            "подтверждено" => Color.Info,
+            "обработка" => Color.Primary,
+            "отправлено" => Color.Secondary,
+            "доставлено" => Color.Success,
+            "отменено" => Color.Error,
             _ => Color.Default
         };
     }
 
+    private string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "ожидание" => "Ожидание",
+            "подтверждено" => "Подтверждено",
+            "обработка" => "Обработка",
+            "отправлено" => "Отправлено",
+            "доставлено" => "Доставлено",
+            "отменено" => "Отменено",
+            _ => status
+        };
+    }
+
+    private void OpenCreateDialog()
+    {
+        // Логика открытия диалога создания заказа
+    }
+
+    private void OpenEditDialog(Order order)
+    {
+        // Логика открытия диалога редактирования заказа
+    }
+
+    private void OpenDeleteDialog(Order order)
+    {
+        // Логика открытия диалога удаления заказа
+    }
+
+    private void ViewOrderDetails(Order order)
+    {
+        // Логика просмотра деталей заказа
+    }
+
     public class Order
     {
-        public DateTime Date { get; set; }
-        public string Customer { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
+        public int Id { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
         public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
     }
 }
