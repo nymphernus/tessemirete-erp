@@ -1,0 +1,23 @@
+@page "/security"
+@using MudBlazor
+
+<MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Username" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Password" Type="password" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Role" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Status" Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+    
+    <div class="text-end mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary">
+            Add User
+        </MudButton>
+    </div>

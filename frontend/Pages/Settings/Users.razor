@@ -1,0 +1,23 @@
+@page "/users"
+@using MudBlazor
+
+<MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Company Name" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Email" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Phone" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Address" Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+    
+    <div class="text-end mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary">
+            Save Settings
+        </MudButton>
+    </div>

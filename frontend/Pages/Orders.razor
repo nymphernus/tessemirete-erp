@@ -1,0 +1,70 @@
+@page "/orders"
+@using MudBlazor
+
+<MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Search orders..." Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6" Class="text-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
+                New Order
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    
+    <MudTable Items="@orders" Hover="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Customer</MudTh>
+            <MudTh>Amount</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Date.ToString("dd/MM/yyyy")</MudTd>
+            <MudTd>@context.Customer</MudTd>
+            <MudTd>@context.Amount.ToString("C")</MudTd>
+            <MudTd>
+                <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
+                    @context.Status
+                </MudChip>
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+@code {
+    private List<Order> orders = new();
+
+    protected override void OnInitialized()
+    {
+        orders = new List<Order>
+        {
+            new Order { Date = DateTime.Now.AddDays(-1), Customer = "John Doe", Amount = 1250, Status = "Completed" },
+            new Order { Date = DateTime.Now.AddDays(-2), Customer = "Jane Smith", Amount = 890, Status = "Pending" },
+            new Order { Date = DateTime.Now.AddDays(-3), Customer = "Bob Johnson", Amount = 2100, Status = "Shipped" }
+        };
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Completed" => Color.Success,
+            "Pending" => Color.Warning,
+            "Shipped" => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    public class Order
+    {
+        public DateTime Date { get; set; }
+        public string Customer { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+}

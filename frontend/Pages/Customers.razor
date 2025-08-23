@@ -1,0 +1,69 @@
+@page "/customers"
+@using MudBlazor
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" Label="Search customers..." Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="6" Class="text-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
+                New Customer
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+    
+    <MudTable Items="@customers" Hover="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Phone</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Name</MudTd>
+            <MudTd>@context.Email</MudTd>
+            <MudTd>@context.Phone</MudTd>
+            <MudTd>
+                <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
+                    @context.Status
+                </MudChip>
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+@code {
+    private List<Customer> customers = new();
+
+    protected override void OnInitialized()
+    {
+        // Тестовые данные
+        customers = new List<Customer>
+        {
+            new Customer { Name = "John Doe", Email = "john@example.com", Phone = "+7 999 123 45 67", Status = "Active" },
+            new Customer { Name = "Jane Smith", Email = "jane@example.com", Phone = "+7 999 987 65 43", Status = "Inactive" }
+        };
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Active" => Color.Success,
+            "Inactive" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    public class Customer
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+    }
+}

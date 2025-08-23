@@ -1,0 +1,68 @@
+﻿@inherits LayoutComponentBase
+@using MudBlazor
+@implements IDisposable
+
+<MudThemeProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+
+<div class="page">
+    <nav class="sidebar">
+        <NavMenu />
+    </nav>
+    
+    <main class="main-content">
+        <header class="top-row">
+            <MudAppBar Elevation="1" Class="mb-0">
+                <a href="/dashboard" style="text-decoration: none; color: inherit;">
+                <MudText Typo="Typo.h6" Style="font-weight: bold;">Tessemirete</MudText>
+                </a>
+                <MudSpacer />
+        
+                <!-- Часы и дата -->
+                <div style="text-align: center;">
+                    <MudText Typo="Typo.body1" Style="font-weight: 500; display: block;">
+                        @_currentTime
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="display: block; opacity: 0.7;">
+                        @_currentDate
+                    </MudText>
+                </div>
+        
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" Href="/profile"/>
+            </MudAppBar>
+        </header>
+
+        <article class="content">
+            <MudPaper Elevation="0" Class="pa-4">
+                <div class="page-content">
+                    @Body
+                </div>
+            </MudPaper>
+        </article>
+    </main>
+</div>
+
+@code {
+    private string _currentTime = DateTime.Now.ToString("HH:mm:ss");
+    private string _currentDate = DateTime.Now.ToString("dd.MM.yyyy");
+    private Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        _timer = new Timer(UpdateDateTime, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    private void UpdateDateTime(object? state)
+    {
+        _currentTime = DateTime.Now.ToString("HH:mm:ss");
+        _currentDate = DateTime.Now.ToString("dd.MM.yyyy");
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}
