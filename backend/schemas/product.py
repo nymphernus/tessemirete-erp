@@ -13,7 +13,10 @@ class ProductCreate(ProductBase):
 
 class ProductUpdate(ProductBase):
     name: Optional[str] = None
+    category: Optional[str] = None
     price: Optional[float] = None
+    stock: Optional[int] = None
+    sku: Optional[str] = None
 
 class ProductResponse(ProductBase):
     id: int

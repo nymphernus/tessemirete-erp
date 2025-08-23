@@ -25,10 +25,13 @@ def read_product(product_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{product_id}", response_model=ProductResponse)
 def update_product_endpoint(product_id: int, product: ProductUpdate, db: Session = Depends(get_db)):
-    db_product = update_product(db, product_id=product_id, product_update=product)
-    if db_product is None:
-        raise HTTPException(status_code=404, detail="Товар не найден")
-    return db_product
+    try:
+        db_product = update_product(db, product_id=product_id, product_update=product)
+        if db_product is None:
+            raise HTTPException(status_code=404, detail="Продукт не найден")
+        return db_product
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{product_id}")
 def delete_product_endpoint(product_id: int, db: Session = Depends(get_db)):

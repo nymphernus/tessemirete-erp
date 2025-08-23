@@ -1,69 +1,124 @@
 @page "/customers"
 @using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@inject ICustomerService CustomerService
+@inject NavigationManager Navigation
 
-    <MudGrid>
-        <MudItem xs="12" md="6">
-            <MudTextField T="string" Label="Search customers..." Variant="Variant.Outlined" />
-        </MudItem>
-        <MudItem xs="12" md="6" Class="text-end">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
-                New Customer
-            </MudButton>
-        </MudItem>
-    </MudGrid>
-    
-    <MudTable Items="@customers" Hover="true" Dense="true">
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudTextField T="string" @bind-Value="searchString" Label="Поиск" 
+                      Variant="Variant.Outlined" Adornment="Adornment.End" 
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      AdornmentIconClicked="FilterCustomers" />
+    </MudItem>
+    <MudItem xs="12" md="6" Class="text-end">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDialog">
+            New Customer
+        </MudButton>
+    </MudItem>
+</MudGrid>
+
+@if (!isLoaded)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudTable Items="@filteredCustomers" Hover="true" Dense="true" Striped="true">
         <HeaderContent>
             <MudTh>Name</MudTh>
+            <MudTh>Organization</MudTh>
             <MudTh>Email</MudTh>
             <MudTh>Phone</MudTh>
-            <MudTh>Status</MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd>@context.Name</MudTd>
+            <MudTd>@context.Organization</MudTd>
             <MudTd>@context.Email</MudTd>
             <MudTd>@context.Phone</MudTd>
             <MudTd>
-                <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
-                    @context.Status
-                </MudChip>
-            </MudTd>
-            <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" 
+                               OnClick="@(e => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
+                               OnClick="@(e => OpenDeleteDialog(context))" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" />
+        </PagerContent>
     </MudTable>
+}
 
 @code {
     private List<Customer> customers = new();
+    private List<Customer> filteredCustomers = new();
+    private string searchString = "";
+    private bool isLoaded = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Тестовые данные
-        customers = new List<Customer>
+        await LoadCustomersAsync();
+    }
+
+
+    private async Task LoadCustomersAsync()
+    {
+        isLoaded = false;
+        StateHasChanged();
+        
+        try
         {
-            new Customer { Name = "John Doe", Email = "john@example.com", Phone = "+7 999 123 45 67", Status = "Active" },
-            new Customer { Name = "Jane Smith", Email = "jane@example.com", Phone = "+7 999 987 65 43", Status = "Inactive" }
-        };
-    }
-
-    private Color GetStatusColor(string status)
-    {
-        return status switch
+            var customerList = await CustomerService.GetCustomersAsync();
+            if (customerList != null)
+            {
+                customers = customerList.ToList();
+                FilterCustomers();
+            }
+        }
+        catch (Exception ex)
         {
-            "Active" => Color.Success,
-            "Inactive" => Color.Error,
-            _ => Color.Default
-        };
+            Console.WriteLine($"Ошибка загрузки клиентов: {ex.Message}");
+        }
+        finally
+        {
+            isLoaded = true;
+            StateHasChanged();
+        }
     }
 
-    public class Customer
+    private void FilterCustomers()
     {
-        public string Name { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
+        if (string.IsNullOrEmpty(searchString))
+        {
+            filteredCustomers = customers;
+        }
+        else
+        {
+            filteredCustomers = customers.Where(c => 
+                c.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                c.Organization.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                c.Email.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+        StateHasChanged();
     }
+
+    private void OpenCreateDialog()
+    {
+        // Логика открытия диалога создания клиента
+    }
+
+    private void OpenEditDialog(Customer customer)
+    {
+        // Логика открытия диалога редактирования клиента
+    }
+
+    private void OpenDeleteDialog(Customer customer)
+    {
+        // Логика открытия диалога удаления клиента
+    }
+
 }

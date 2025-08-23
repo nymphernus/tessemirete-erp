@@ -1,2 +1,2 @@
-# terp
+# T-ERP
 Tessemirete ERP System

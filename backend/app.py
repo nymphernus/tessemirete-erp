@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import customers_router, products_router, orders_router
+from api.routes import customers_router, products_router, orders_router, dashboard_router
 from database import Base, engine
 
 # Создание таблиц
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(customers_router)
 app.include_router(products_router)
 app.include_router(orders_router)
+app.include_router(dashboard_router)
 
 if __name__ == "__main__":
     import uvicorn

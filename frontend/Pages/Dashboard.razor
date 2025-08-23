@@ -1,45 +1,62 @@
 ﻿@page "/"
 @page "/dashboard"
 @using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@inject IDashboardService DashboardService
 @inject NavigationManager Navigation
+
 
 <MudGrid>
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Elevation="2" Class="pa-4 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Color="Color.Primary" />
-                <MudText Typo="Typo.h5" Class="mt-2">125</MudText>
-                <MudText Typo="Typo.body2">Customers</MudText>
+                <MudText Typo="Typo.h5" Class="mt-2">@stats.Customers</MudText>
+                <MudText Typo="Typo.body2">Клиенты</MudText>
             </MudPaper>
         </MudItem>
         
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Elevation="2" Class="pa-4 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" />
-                <MudText Typo="Typo.h5" Class="mt-2">89</MudText>
-                <MudText Typo="Typo.body2">Products</MudText>
+                <MudText Typo="Typo.h5" Class="mt-2">@stats.Products</MudText>
+                <MudText Typo="Typo.body2">Товары</MudText>
             </MudPaper>
         </MudItem>
         
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Elevation="2" Class="pa-4 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Large" Color="Color.Info" />
-                <MudText Typo="Typo.h5" Class="mt-2">42</MudText>
-                <MudText Typo="Typo.body2">Orders</MudText>
+                <MudText Typo="Typo.h5" Class="mt-2">@stats.Orders</MudText>
+                <MudText Typo="Typo.body2">Заказы</MudText>
             </MudPaper>
         </MudItem>
         
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Elevation="2" Class="pa-4 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Success" />
-                <MudText Typo="Typo.h5" Class="mt-2">$12,450</MudText>
-                <MudText Typo="Typo.body2">Revenue</MudText>
+                <MudText Typo="Typo.h5" Class="mt-2">@stats.Revenue руб.</MudText>
+                <MudText Typo="Typo.body2">Доход</MudText>
             </MudPaper>
         </MudItem>
 </MudGrid>
 
 @code {
-    protected override void OnInitialized()
+    private DashboardStats stats = new();
+
+    protected override async Task OnInitializedAsync()
     {
         Navigation.NavigateTo("/dashboard");
+        await LoadStatsAsync();
+    }
+
+    private async Task LoadStatsAsync()
+    {
+        var data = await DashboardService.GetDashboardStatsAsync();
+        if (data != null)
+        {
+            stats = data;
+            StateHasChanged();
+        }
     }
 }

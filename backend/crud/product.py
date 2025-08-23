@@ -17,12 +17,24 @@ def create_product(db: Session, product: ProductCreate):
 
 def update_product(db: Session, product_id: int, product_update: ProductUpdate):
     db_product = db.query(Product).filter(Product.id == product_id).first()
-    if db_product:
-        update_data = product_update.dict(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(db_product, key, value)
-        db.commit()
-        db.refresh(db_product)
+    if not db_product:
+        return None
+    
+    update_data = product_update.dict(exclude_unset=True)
+    
+    if 'sku' in update_data and update_data['sku'] != db_product.sku:
+        existing = db.query(Product).filter(
+            Product.sku == update_data['sku'],
+            Product.id != product_id
+        ).first()
+        if existing:
+            raise ValueError("Артикул уже существует")
+    
+    for key, value in update_data.items():
+        setattr(db_product, key, value)
+    
+    db.commit()
+    db.refresh(db_product)
     return db_product
 
 def delete_product(db: Session, product_id: int):
