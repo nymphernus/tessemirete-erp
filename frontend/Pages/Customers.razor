@@ -67,11 +67,11 @@
                 <MudTd>@context.Email</MudTd>
                 <MudTd>@context.Phone</MudTd>
                 <MudTd Class="text-center">
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                   Color="Color.Info"
-                                   Size="Size.Small"
-                                   OnClick="@(e => OpenEditDialog(context))"
-                                   Title="Редактировать" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                    Color="Color.Primary"
+                                    Size="Size.Small"
+                                    OnClick="@(e => ViewCustomerDetails(context))"
+                                    Title="Просмотр" />
                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                    Color="Color.Error"
                                    Size="Size.Small"
@@ -81,10 +81,7 @@
             </RowTemplate>
 
             <PagerContent>
-                <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" 
-                               RowsPerPageString="Записей на странице:"
-                               OfText="из"
-                               AllItemsText="Все" />
+                <MudTablePager HideRowsPerPage="true"/>
             </PagerContent>
         </MudTable>
     }
@@ -157,26 +154,22 @@
         if (!result.Canceled)
             await LoadCustomersAsync();
     }
-
-    private async Task OpenEditDialog(Customer customer)
+    private async Task ViewCustomerDetails(Customer customer)
     {
-        var parameters = new DialogParameters<EditCustomerDialog>
+        var parameters = new DialogParameters<CustomerDetailDialog>
         {
             { x => x.Customer, customer }
         };
 
         var options = new DialogOptions {
             CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
+            MaxWidth = MaxWidth.Medium,
             FullWidth = true
-            };
-        var dialog = DialogService.Show<EditCustomerDialog>(string.Empty, parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-            await LoadCustomersAsync();
+        };
+        
+        var dialog = DialogService.Show<CustomerDetailDialog>(string.Empty, parameters, options);
+        await dialog.Result;
     }
-
     private async Task OpenDeleteDialog(Customer customer)
     {
         var parameters = new DialogParameters<DeleteConfirmationDialog>

@@ -19,8 +19,8 @@ public class Order
     public DateTime UpdatedAt { get; set; }
     [JsonPropertyName("customer_name")]
     public string CustomerName { get; set; } = string.Empty;
-
-    [JsonPropertyName("items")]
+    [JsonPropertyName("org_name")]
+    public string Organization { get; set; } = string.Empty;
     public List<OrderItem> Items { get; set; } = new();
 }
 

@@ -88,10 +88,7 @@
             </RowTemplate>
 
             <PagerContent>
-                <MudTablePager PageSizeOptions="new int[]{10, 25, 50}" 
-                               RowsPerPageString="Записей на странице:"
-                               OfText="из"
-                               AllItemsText="Все" />
+                <MudTablePager HideRowsPerPage="true"/>
             </PagerContent>
         </MudTable>
     }
@@ -157,7 +154,7 @@
 
         var options = new DialogOptions {
             CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
+            MaxWidth = MaxWidth.Medium,
             FullWidth = true
         };
         var dialog = DialogService.Show<CreateProductDialog>(string.Empty, parameters, options);
@@ -176,7 +173,7 @@
 
         var options = new DialogOptions {
             CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
+            MaxWidth = MaxWidth.Medium,
             FullWidth = true
         };
         var dialog = DialogService.Show<EditProductDialog>(string.Empty, parameters, options);

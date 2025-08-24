@@ -16,17 +16,16 @@ def create_order_endpoint(order: OrderCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[OrderResponse])
 def read_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    # Получаем заказы с данными о клиенте и элементах
     orders_data = db.query(Order).options(
         joinedload(Order.customer),
         joinedload(Order.items).joinedload(OrderItem.product)
     ).offset(skip).limit(limit).all()
     
-    # Преобразуем в список OrderResponse с полными данными
     result = []
     for order in orders_data:
         # Получаем имя клиента
         customer_name = order.customer.name if order.customer else ""
+        org_name = order.customer.org_name if order.customer else ""
         
         # Формируем элементы заказа
         items = []
@@ -49,6 +48,7 @@ def read_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
             "created_at": order.created_at,
             "updated_at": order.updated_at,
             "customer_name": customer_name,
+            "org_name": org_name,
             "items": items
         })
     
@@ -66,6 +66,7 @@ def read_order(order_id: int, db: Session = Depends(get_db)):
     
     # Получаем имя клиента
     customer_name = order.customer.name if order.customer else ""
+    org_name = order.customer.org_name if order.customer else ""
     
     # Формируем элементы заказа
     items = []
@@ -88,6 +89,7 @@ def read_order(order_id: int, db: Session = Depends(get_db)):
         "created_at": order.created_at,
         "updated_at": order.updated_at,
         "customer_name": customer_name,
+        "org_name": org_name,
         "items": items
     }
 

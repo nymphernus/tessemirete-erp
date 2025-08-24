@@ -1,27 +1,23 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using frontend.Pages.CustomersPages
 @inject IOrderService OrderService
+@inject IDialogService DialogService
+@inject ICustomerService CustomerService
 @inject ISnackbar Snackbar
 
 <DialogContent Class="pa-4">
-    @if (order == null && !loadFailed)
+    @if (order == null && !isLoaded)
     {
         <div class="d-flex justify-content-center my-4">
             <MudProgressCircular Indeterminate="true" />
             <MudText Class="ml-2">Загрузка деталей заказа...</MudText>
         </div>
     }
-    else if (loadFailed)
-    {
-        <MudPaper Elevation="1" Class="pa-4 text-center">
-            <MudText Color="Color.Error">Ошибка загрузки деталей заказа</MudText>
-            <MudButton OnClick="LoadOrderDetails" Class="mt-2">Повторить</MudButton>
-        </MudPaper>
-    }
     else if (order != null)
     {
-        <MudText Typo="Typo.h5" Class="mb-4">Детали заказа #@order.Id</MudText>
+        <MudText Typo="Typo.h5" Class="mb-4">Детали заказа № @order.Id</MudText>
         
         <!-- Основная информация -->
         <MudPaper Elevation="1" Class="pa-4 mb-4">
@@ -40,9 +36,17 @@
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.body2" Color="Color.Secondary">Статус:</MudText>
-                    <MudChip T="string" Color="@GetStatusColor(order.Status)" Variant="Variant.Filled" Size="Size.Small">
+                    <MudChip T="string" Color="@GetStatusColor(order.Status)" Variant="Variant.Filled" Size="Size.Medium">
                         @GetStatusText(order.Status)
                     </MudChip>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudButton Variant="Variant.Filled"
+                            Color="Color.Primary"
+                            OnClick="ViewCustomerDetails"
+                            Size="Size.Medium">
+                        Контакты
+                    </MudButton>
                 </MudItem>
                 <MudItem xs="12">
                     <MudDivider Class="my-2" />
@@ -98,7 +102,7 @@
     [Parameter] public Order? Order { get; set; }
 
     private Order? order;
-    private bool loadFailed = false;
+    private bool isLoaded = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -110,26 +114,22 @@
         {
             await LoadOrderDetails();
         }
+        isLoaded = true;
     }
 
     private async Task LoadOrderDetails()
     {
         try
         {
-            loadFailed = false;
-            var result = await OrderService.GetOrderByIdAsync(OrderId);
+            var result = await OrderService.GetOrderByIdAsync(OrderId > 0 ? OrderId : order?.Id ?? 0);
             if (result != null)
             {
                 order = result;
-            }
-            else
-            {
-                loadFailed = true;
+                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
-            loadFailed = true;
             Snackbar.Add($"Ошибка загрузки заказа: {ex.Message}", Severity.Error);
         }
     }
@@ -162,9 +162,64 @@
         };
     }
 
-    private void EditOrder()
+    private async Task EditOrder()
     {
-        MudDialog.Close(DialogResult.Ok(order));
+        if (order == null) return;
+
+        var parameters = new DialogParameters<EditOrderDialog>
+        {
+            { x => x.Order, order }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<EditOrderDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadOrderDetails();
+        }
+    }
+
+    private async Task ViewCustomerDetails()
+    {
+        if (order?.CustomerId > 0)
+        {
+            try
+            {
+                var customer = await CustomerService.GetCustomerByIdAsync(order.CustomerId);
+                if (customer != null)
+                {
+                    var parameters = new DialogParameters<CustomerDetailDialog>
+                    {
+                        { x => x.Customer, customer },
+                        { x => x.ShowEditButton, false }
+                    };
+
+                    var options = new DialogOptions {
+                        CloseOnEscapeKey = true,
+                        MaxWidth = MaxWidth.Small,
+                        FullWidth = true
+                    };
+                    
+                    var dialog = DialogService.Show<CustomerDetailDialog>(string.Empty, parameters, options);
+                    await dialog.Result;
+                }
+                else
+                {
+                    Snackbar.Add("Клиент не найден", Severity.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Ошибка загрузки клиента: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
     private void Cancel() => MudDialog.Cancel();

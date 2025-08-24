@@ -43,6 +43,7 @@ class OrderResponse(OrderBase):
     created_at: datetime
     updated_at: datetime
     customer_name: str = ""
+    org_name: str = ""
     items: List[OrderItemResponse] = []
     
     class Config:

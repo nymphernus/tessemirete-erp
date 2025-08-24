@@ -1,0 +1,204 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@using frontend.Pages.CustomersPages
+@inject ICustomerService CustomerService
+@inject IOrderService OrderService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-5">
+    @if (customer == null && !isLoaded)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <MudProgressCircular Indeterminate="true" />
+            <MudText Class="ml-2">Загрузка данных клиента...</MudText>
+        </div>
+    }
+    else if (customer != null)
+    {
+        <MudText Typo="Typo.h5" Class="mb-4">Детали клиента</MudText>
+        
+        <!-- Основная информация -->
+        <MudPaper Elevation="1" Class="pa-4 mb-4">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Имя:</MudText>
+                    <MudText>@customer.Name</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Организация:</MudText>
+                    <MudText>@customer.Organization</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Email:</MudText>
+                    <MudText>@customer.Email</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Телефон:</MudText>
+                    <MudText>@customer.Phone</MudText>
+                </MudItem>
+                @if (!string.IsNullOrEmpty(customer.Address))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Адрес:</MudText>
+                        <MudText>@customer.Address</MudText>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Заказы клиента -->
+        <MudText Typo="Typo.h6" Class="mb-3">Заказы клиента</MudText>
+        @if (orders.Count == 0)
+        {
+            <MudPaper Elevation="1" Class="pa-4 text-center">
+                <MudText>У клиента нет заказов</MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <MudTable Items="@orders" Dense="true" Class="mb-4">
+                <HeaderContent>
+                    <MudTh>Номер заказа</MudTh>
+                    <MudTh>Дата</MudTh>
+                    <MudTh>Сумма</MudTh>
+                    <MudTh>Статус</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>#@context.Id</MudTd>
+                    <MudTd>@context.CreatedAt.ToString("dd.MM.yyyy")</MudTd>
+                    <MudTd>@context.TotalAmount.ToString("C")</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled" Size="Size.Small">
+                            @GetStatusText(context.Status)
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    @if (ShowEditButton) // ← Условие отображения кнопки
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EditCustomer">Редактировать</MudButton>
+    }
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Customer? Customer { get; set; }
+    [Parameter] public int CustomerId { get; set; }
+    [Parameter] public bool ShowEditButton { get; set; } = true;
+
+    private Customer? customer;
+    private List<Order> orders = new();
+    private bool isLoaded = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Customer != null)
+        {
+            customer = Customer;
+            await LoadCustomerOrders();
+        }
+        else if (CustomerId > 0)
+        {
+            await LoadCustomerData();
+        }
+        isLoaded = true;
+    }
+
+    private async Task LoadCustomerData()
+    {
+        try
+        {
+            var result = await CustomerService.GetCustomerByIdAsync(CustomerId > 0 ? CustomerId : customer?.Id ?? 0);
+            if (result != null)
+            {
+                customer = result;
+                await LoadCustomerOrders();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки клиента: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadCustomerOrders()
+    {
+        try
+        {
+            if (customer?.Id > 0)
+            {
+                var orderList = await OrderService.GetOrdersAsync();
+                if (orderList != null)
+                {
+                    orders = orderList.Where(o => o.CustomerId == customer.Id).ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки заказов: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "ожидание" => Color.Warning,
+            "подтверждено" => Color.Info,
+            "обработка" => Color.Primary,
+            "отправлено" => Color.Secondary,
+            "доставлено" => Color.Success,
+            "отменено" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "ожидание" => "Ожидание",
+            "подтверждено" => "Подтверждено",
+            "обработка" => "Обработка",
+            "отправлено" => "Отправлено",
+            "доставлено" => "Доставлено",
+            "отменено" => "Отменено",
+            _ => status
+        };
+    }
+
+    private async Task EditCustomer()
+    {
+        if (customer == null || !ShowEditButton) return;
+
+        var parameters = new DialogParameters<EditCustomerDialog>
+        {
+            { x => x.Customer, customer }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<EditCustomerDialog>(string.Empty, parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadCustomerData();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
