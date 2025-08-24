@@ -1,0 +1,159 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IOrderService OrderService
+@inject ICustomerService CustomerService
+@inject IProductService ProductService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Создать новый заказ</MudText>
+
+    <MudForm @ref="form" Model="@orderCreate">
+        <MudSelect T="int" Label="Клиент" @bind-Value="orderCreate.CustomerId" 
+                   For="@(() => orderCreate.CustomerId)" Required="true"
+                   FullWidth="true" Margin="Margin.Normal">
+            @foreach (var customer in customers)
+            {
+                <MudSelectItem Value="@customer.Id">@customer.Name (@customer.Organization)</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">Товары в заказе</MudText>
+        
+        @for (int i = 0; i < orderItems.Count; i++)
+        {
+            var index = i;
+            <MudPaper Elevation="1" Class="pa-3 mb-3">
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int" Label="Товар" @bind-Value="orderItems[index].ProductId"
+                                   FullWidth="true" Margin="Margin.Dense">
+                            @foreach (var product in products)
+                            {
+                                <MudSelectItem Value="@product.Id">@product.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudNumericField T="int" Label="Количество" @bind-Value="orderItems[index].Quantity"
+                                         Min="1" FullWidth="true" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="2" Class="d-flex align-items-center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error"
+                                       OnClick="@(e => RemoveItem(index))" />
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+
+        <MudButton Variant="Variant.Outlined" 
+                   OnClick="AddNewItem" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Class="mb-4">
+            Добавить товар
+        </MudButton>
+    </MudForm>
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudSpacer />
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Создать</MudButton>
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    private MudForm? form;
+    private OrderCreate orderCreate = new();
+    private List<OrderItemCreate> orderItems = new() { new OrderItemCreate() };
+    private List<Customer> customers = new();
+    private List<Product> products = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+        await LoadProducts();
+    }
+
+    private async Task LoadCustomers()
+    {
+        try
+        {
+            var customerList = await CustomerService.GetCustomersAsync();
+            if (customerList != null)
+            {
+                customers = customerList.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки клиентов: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            var productList = await ProductService.GetProductsAsync();
+            if (productList != null)
+            {
+                products = productList.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки товаров: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void AddNewItem()
+    {
+        orderItems.Add(new OrderItemCreate());
+    }
+
+    private void RemoveItem(int index)
+    {
+        if (orderItems.Count > 1)
+        {
+            orderItems.RemoveAt(index);
+        }
+    }
+
+    private async Task Submit()
+    {
+        await form!.Validate();
+        if (!form.IsValid) return;
+
+        if (orderItems.Any(item => item.ProductId == 0 || item.Quantity <= 0))
+        {
+            Snackbar.Add("Пожалуйста, выберите товары и укажите количество", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            orderCreate.Items = orderItems.Where(item => item.ProductId > 0).ToList();
+            
+            var result = await OrderService.CreateOrderAsync(orderCreate);
+            if (result is not null)
+            {
+                Snackbar.Add("Заказ успешно создан!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                Snackbar.Add("Не удалось создать заказ", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

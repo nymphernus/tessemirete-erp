@@ -1,0 +1,171 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IOrderService OrderService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-4">
+    @if (order == null && !loadFailed)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <MudProgressCircular Indeterminate="true" />
+            <MudText Class="ml-2">Загрузка деталей заказа...</MudText>
+        </div>
+    }
+    else if (loadFailed)
+    {
+        <MudPaper Elevation="1" Class="pa-4 text-center">
+            <MudText Color="Color.Error">Ошибка загрузки деталей заказа</MudText>
+            <MudButton OnClick="LoadOrderDetails" Class="mt-2">Повторить</MudButton>
+        </MudPaper>
+    }
+    else if (order != null)
+    {
+        <MudText Typo="Typo.h5" Class="mb-4">Детали заказа #@order.Id</MudText>
+        
+        <!-- Основная информация -->
+        <MudPaper Elevation="1" Class="pa-4 mb-4">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Дата создания:</MudText>
+                    <MudText>@order.CreatedAt.ToString("dd.MM.yyyy HH:mm")</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Последнее обновление:</MudText>
+                    <MudText>@order.UpdatedAt.ToString("dd.MM.yyyy HH:mm")</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Клиент:</MudText>
+                    <MudText>@order.CustomerName</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Статус:</MudText>
+                    <MudChip T="string" Color="@GetStatusColor(order.Status)" Variant="Variant.Filled" Size="Size.Small">
+                        @GetStatusText(order.Status)
+                    </MudChip>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.h6" Color="Color.Primary">Итого: @order.TotalAmount.ToString("C")</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Таблица товаров -->
+        <MudText Typo="Typo.h6" Class="mb-3">Содержимое заказа</MudText>
+        @if (order.Items.Count == 0)
+        {
+            <MudPaper Elevation="1" Class="pa-4 text-center">
+                <MudText>В заказе нет товаров</MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <MudTable Items="@order.Items" Dense="true" Class="mb-4">
+                <HeaderContent>
+                    <MudTh>Товар</MudTh>
+                    <MudTh class="text-right">Цена за ед.</MudTh>
+                    <MudTh class="text-center">Количество</MudTh>
+                    <MudTh class="text-right">Сумма</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.ProductName</MudTd>
+                    <MudTd class="text-right">@context.PricePerUnit.ToString("C")</MudTd>
+                    <MudTd class="text-center">@context.Quantity</MudTd>
+                    <MudTd class="text-right">@context.TotalPrice.ToString("C")</MudTd>
+                </RowTemplate>
+                <FooterContent>
+                    <MudTd colspan="3" class="text-right">
+                        <MudText Typo="Typo.subtitle2">Итого:</MudText>
+                    </MudTd>
+                    <MudTd class="text-right">
+                        <MudText Typo="Typo.subtitle2">@order.TotalAmount.ToString("C")</MudText>
+                    </MudTd>
+                </FooterContent>
+            </MudTable>
+        }
+    }
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EditOrder">Редактировать</MudButton>
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public int OrderId { get; set; }
+    [Parameter] public Order? Order { get; set; }
+
+    private Order? order;
+    private bool loadFailed = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Order != null)
+        {
+            order = Order;
+        }
+        else if (OrderId > 0)
+        {
+            await LoadOrderDetails();
+        }
+    }
+
+    private async Task LoadOrderDetails()
+    {
+        try
+        {
+            loadFailed = false;
+            var result = await OrderService.GetOrderByIdAsync(OrderId);
+            if (result != null)
+            {
+                order = result;
+            }
+            else
+            {
+                loadFailed = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            loadFailed = true;
+            Snackbar.Add($"Ошибка загрузки заказа: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "ожидание" => Color.Warning,
+            "подтверждено" => Color.Info,
+            "обработка" => Color.Primary,
+            "отправлено" => Color.Secondary,
+            "доставлено" => Color.Success,
+            "отменено" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "ожидание" => "Ожидание",
+            "подтверждено" => "Подтверждено",
+            "обработка" => "Обработка",
+            "отправлено" => "Отправлено",
+            "доставлено" => "Доставлено",
+            "отменено" => "Отменено",
+            _ => status
+        };
+    }
+
+    private void EditOrder()
+    {
+        MudDialog.Close(DialogResult.Ok(order));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

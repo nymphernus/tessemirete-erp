@@ -1,5 +1,10 @@
 @page "/orders"
 @using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@using frontend.Pages.OrdersPages
+@inject IOrderService OrderService
+@inject IDialogService DialogService
 
 <MudPaper Elevation="2" Class="pa-6" Style="width:100%; max-width:1600px; margin:auto;">
     <!-- Заголовок и кнопка -->
@@ -22,7 +27,7 @@
                   Margin="Margin.Dense"
                   Adornment="Adornment.End"
                   Immediate="true"
-                  OnKeyUp="@(e => FilterOrders())"
+                  AdornmentIconClicked="FilterOrders"
                   Class="mb-4 full-width" />
 
     <!-- Контент -->
@@ -49,6 +54,7 @@
             Class="elevation-1 rounded-lg full-width customers-table">
 
             <HeaderContent>
+                <MudTh>Номер</MudTh>
                 <MudTh>Дата</MudTh>
                 <MudTh>Клиент</MudTh>
                 <MudTh>Сумма</MudTh>
@@ -57,11 +63,13 @@
             </HeaderContent>
 
             <RowTemplate>
-                <MudTd>@context.CreatedAt.ToString("dd/MM/yyyy")</MudTd>
+                <MudTd>#@context.Id</MudTd>
+                <MudTd>@context.CreatedAt.ToString("dd/MM/yyyy HH:mm")</MudTd>
                 <MudTd>@context.CustomerName</MudTd>
                 <MudTd>@context.TotalAmount.ToString("C")</MudTd>
-                <MudTd Class="text-center">
-                    <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled" Size="Size.Small">
+                <MudTd>
+                    <MudChip T="string" Color="@GetStatusColor(context.Status)" 
+                             Variant="Variant.Filled" Size="Size.Small">
                         @GetStatusText(context.Status)
                     </MudChip>
                 </MudTd>
@@ -109,19 +117,15 @@
     {
         isLoaded = false;
         StateHasChanged();
-        
+
         try
         {
-            // Здесь будет вызов сервиса для получения заказов
-            // var orderList = await OrderService.GetOrdersAsync();
-            // Пока тестовые данные:
-            orders = new List<Order>
+            var orderList = await OrderService.GetOrdersAsync();
+            if (orderList is not null)
             {
-                new Order { Id = 1, CustomerName = "John Doe", TotalAmount = 1250.50m, Status = "ожидание", CreatedAt = DateTime.Now.AddDays(-2) },
-                new Order { Id = 2, CustomerName = "Jane Smith", TotalAmount = 890.75m, Status = "подтверждено", CreatedAt = DateTime.Now.AddDays(-1) },
-                new Order { Id = 3, CustomerName = "Bob Johnson", TotalAmount = 2100.00m, Status = "доставлено", CreatedAt = DateTime.Now }
-            };
-            FilterOrders();
+                orders = orderList.ToList();
+                FilterOrders();
+            }
         }
         catch (Exception ex)
         {
@@ -136,18 +140,17 @@
 
     private void FilterOrders()
     {
-        if (string.IsNullOrEmpty(searchString))
+        if (string.IsNullOrWhiteSpace(searchString))
         {
             filteredOrders = orders;
+            return;
         }
-        else
-        {
-            filteredOrders = orders.Where(o => 
+
+        filteredOrders = orders.Where(o =>
                 o.Id.ToString().Contains(searchString) ||
-                o.CustomerName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-                o.Status.Contains(searchString, StringComparison.OrdinalIgnoreCase)
-            ).ToList();
-        }
+                (o.CustomerName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                GetStatusText(o.Status).Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private Color GetStatusColor(string status)
@@ -178,32 +181,97 @@
         };
     }
 
-    private void OpenCreateDialog()
+    private async Task OpenCreateDialog()
     {
-        // Логика открытия диалога создания заказа
+        // Не передаем Order, так как создаем новый
+        var parameters = new DialogParameters<CreateOrderDialog>
+        {
+            // Убрано: { x => x.Order, new Order() }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        var dialog = DialogService.Show<CreateOrderDialog>("Создать заказ", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadOrdersAsync();
     }
 
-    private void OpenEditDialog(Order order)
+    private async Task OpenEditDialog(Order order)
     {
-        // Логика открытия диалога редактирования заказа
+        var parameters = new DialogParameters<EditOrderDialog>
+        {
+            { x => x.Order, order }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        var dialog = DialogService.Show<EditOrderDialog>("Редактировать заказ", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+            await LoadOrdersAsync();
     }
 
-    private void OpenDeleteDialog(Order order)
+    private async Task OpenDeleteDialog(Order order)
     {
-        // Логика открытия диалога удаления заказа
+        var parameters = new DialogParameters<DeleteConfirmationDialog>
+        {
+            { x => x.ContentText, $"Вы уверены, что хотите удалить заказ #{order.Id}?" },
+            { x => x.ButtonText, "Удалить" },
+            { x => x.Color, Color.Error }
+        };
+
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        var dialog = DialogService.Show<DeleteConfirmationDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var success = await OrderService.DeleteOrderAsync(order.Id);
+            if (success)
+            {
+                orders.Remove(order);
+                FilterOrders();
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine("Не удалось удалить заказ");
+            }
+        }
     }
 
-    private void ViewOrderDetails(Order order)
+    private async Task ViewOrderDetails(Order order)
     {
-        // Логика просмотра деталей заказа
-    }
+        var parameters = new DialogParameters<OrderDetailDialog>
+        {
+            { x => x.Order, order }
+        };
 
-    public class Order
-    {
-        public int Id { get; set; }
-        public string CustomerName { get; set; } = string.Empty;
-        public decimal TotalAmount { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
+        var options = new DialogOptions {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        var dialog = DialogService.Show<OrderDetailDialog>($"Заказ #{order.Id}", parameters, options);
+        var result = await dialog.Result;
+        
+        // Если заказ был отредактирован, обновляем список
+        if (!result.Canceled)
+        {
+            await LoadOrdersAsync();
+        }
     }
 }

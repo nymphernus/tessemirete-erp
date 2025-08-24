@@ -1,0 +1,83 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IOrderService OrderService
+@inject ISnackbar Snackbar
+
+<DialogContent Class="pa-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Редактировать заказ #@order?.Id</MudText>
+
+    @if (order == null)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <MudProgressCircular Indeterminate="true" />
+        </div>
+    }
+    else
+    {
+        <MudForm @ref="form" Model="@orderUpdate">
+            <MudSelect T="string" Label="Статус" @bind-Value="orderUpdate.Status" 
+                       For="@(() => orderUpdate.Status)" Required="true"
+                       FullWidth="true" Margin="Margin.Normal">
+                <MudSelectItem Value="@("ожидание")">Ожидание</MudSelectItem>
+                <MudSelectItem Value="@("подтверждено")">Подтверждено</MudSelectItem>
+                <MudSelectItem Value="@("обработка")">Обработка</MudSelectItem>
+                <MudSelectItem Value="@("отправлено")">Отправлено</MudSelectItem>
+                <MudSelectItem Value="@("доставлено")">Доставлено</MudSelectItem>
+                <MudSelectItem Value="@("отменено")">Отменено</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+    }
+</DialogContent>
+
+<DialogActions Class="pa-4">
+    <MudSpacer />
+    <MudButton Variant="Variant.Text" OnClick="Cancel">Закрыть</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Сохранить</MudButton>
+</DialogActions>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Order? Order { get; set; }
+
+    private MudForm? form;
+    private Order? order;
+    private OrderUpdate orderUpdate = new();
+
+    protected override void OnInitialized()
+    {
+        order = Order;
+        if (order != null)
+        {
+            orderUpdate.Status = order.Status;
+        }
+    }
+
+    private async Task Submit()
+    {
+        await form!.Validate();
+        if (!form.IsValid) return;
+
+        if (order == null) return;
+
+        try
+        {
+            var result = await OrderService.UpdateOrderAsync(order.Id, orderUpdate);
+            if (result is not null)
+            {
+                Snackbar.Add("Заказ успешно обновлён!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                Snackbar.Add("Не удалось обновить заказ", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

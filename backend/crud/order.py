@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models.order import Order, OrderItem
 from models.product import Product
+from models.customer import Customer
 from schemas.order import OrderCreate, OrderUpdate
 from fastapi import HTTPException
 
@@ -11,8 +12,8 @@ def get_order(db: Session, order_id: int):
     return db.query(Order).filter(Order.id == order_id).first()
 
 def create_order(db: Session, order: OrderCreate):
-    from crud.customer import get_customer
-    customer = get_customer(db, order.customer_id)
+    # Проверка клиента
+    customer = db.query(Customer).filter(Customer.id == order.customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Клиент не найден")
     
@@ -43,9 +44,10 @@ def create_order(db: Session, order: OrderCreate):
         status=order.status.value if order.status else "ожидание"
     )
     db.add(db_order)
-    db.commit()
+    db.flush()  # Получаем ID заказа без коммита
     db.refresh(db_order)
     
+    # Устанавливаем order_id для всех элементов
     for item in order_items:
         item.order_id = db_order.id
         db.add(item)

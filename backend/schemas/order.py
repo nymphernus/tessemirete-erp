@@ -25,11 +25,25 @@ class OrderCreate(OrderBase):
 class OrderUpdate(BaseModel):
     status: Optional[OrderStatus] = None
 
+class OrderItemResponse(BaseModel):
+    id: int
+    order_id: int
+    product_id: int
+    product_name: str = ""
+    quantity: int
+    price_per_unit: float
+    total_price: float
+
+    class Config:
+        from_attributes = True
+
 class OrderResponse(OrderBase):
     id: int
     total_amount: float
     created_at: datetime
     updated_at: datetime
+    customer_name: str = ""
+    items: List[OrderItemResponse] = []
     
     class Config:
         from_attributes = True
